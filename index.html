@@ -319,8 +319,7 @@
             
             container.innerHTML = ''; 
 
-            // Сверху: свечной график со встроенным объёмом и наложенным VWAP
-            // Снизу: отдельное окно с RSI
+            // Скрываем объемы снизу графиков по требованию, заменяем на RSI + VWAP непосредственно на графике
             tvWidget = new TradingView.widget({
                 "autosize": true,
                 "symbol": `BINANCE:${symbol}`,
@@ -338,8 +337,11 @@
                 "save_image": false,
                 "container_id": "chart-container",
                 "studies": [
-                    "VWAP@tv-basicstudies",
-                    "RSI@tv-basicstudies"
+                    "RSI@tv-basicstudies",
+                    "VWAP@tv-basicstudies"
+                ],
+                "disabled_features": [
+                    "volume_force_overlay"
                 ]
             });
         }
@@ -421,7 +423,7 @@
             btn.classList.toggle('active', alertsEnabled);
             
             if (alertsEnabled) {
-                showToast("Smart Alerts", "Мониторинг аномальной волатильности (≥5%) запущен", "info");
+                showToast("Smart Alerts", "Мониторинг аномальной волатильности (≥10%) запущен", "info");
                 if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             } else {
                 showToast("Smart Alerts", "Мониторинг полностью деактивирован", "info");
@@ -479,13 +481,13 @@
         }
 
         function checkAndFireAlert(symbol, price, changePct) {
-            if (Math.abs(changePct) < 5.0) return;
+            if (Math.abs(changePct) < 10.0) return;
 
             const alertKey = `alerted_${symbol}`;
             const lastAlertTime = sessionStorage.getItem(alertKey);
             const now = Date.now();
 
-            // Интервал повторного срабатывания алерта для одной монеты — не чаще 15 минут, во избежание спама
+            // Интервал повторного срабатывания алерта для одной монеты — не чаще 15 минут, во избежание спама спама
             if (!lastAlertTime || (now - parseInt(lastAlertTime) > 15 * 60 * 1000)) {
                 const dir = changePct > 0 ? "🚀 ПАМП" : "🩸 ДАМП";
                 const type = changePct > 0 ? "alert-up" : "alert-down";
