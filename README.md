@@ -1,4 +1,4 @@
-# Trminal 
+Trminal 
 
 // CURRENT
 "RSI@tv-basicstudies"
