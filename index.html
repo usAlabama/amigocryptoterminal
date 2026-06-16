@@ -128,9 +128,23 @@ header {
 	-webkit-tap-highlight-color: transparent;
 }
 .btn-icon:active { background: var(--bg-btn-hover); }
-.btn-icon svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.2s; }
+.btn-icon svg { width: 14px; height: 14px; fill: currentColor; transition: transform 0.2s; }
 .btn-icon:active svg { transform: scale(0.9); }
 .btn-icon.active { color: var(--warn-color); }
+
+/* Контейнер кнопок в шапке */
+.header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.header-buttons .btn-icon {
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
 /* СЕЛЕКТОР КРИПТЫ (Горизонтальный скролл) */
 .crypto-selector {
@@ -343,6 +357,116 @@ header {
 .modal-btn.confirm { background: var(--accent); color: #fff; }
 .modal-btn.confirm:active { background: var(--accent-hover); }
 .modal-btn:disabled { opacity: 0.55; cursor: default; }
+/* ====================== НАСТРОЙКИ АЛЕРТОВ ====================== */
+.settings-group {
+    margin-bottom: 16px;
+}
+
+.settings-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
+
+.threshold-value {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 1rem;
+    min-width: 40px;
+    text-align: right;
+}
+
+/* ПОЛЗУНОК (мобильная адаптация) */
+.threshold-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    background: var(--bg-dark);
+    border-radius: 4px;
+    outline: none;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    margin: 8px 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Трек ползунка (WebKit - Chrome, Safari, iOS) */
+.threshold-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(to right, 
+        var(--accent) 0%, 
+        var(--accent) var(--slider-progress, 50%), 
+        var(--bg-dark) var(--slider-progress, 50%), 
+        var(--bg-dark) 100%);
+    border-radius: 4px;
+}
+
+/* Трек ползунка (Firefox) */
+.threshold-slider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-dark);
+    border-radius: 4px;
+}
+.threshold-slider::-moz-range-progress {
+    background: var(--accent);
+    height: 8px;
+    border-radius: 4px;
+}
+
+/* Ползунок (WebKit) */
+.threshold-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    border: 3px solid var(--text-main);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(41, 98, 255, 0.4);
+    margin-top: -8px;
+    transition: transform 0.15s ease;
+}
+.threshold-slider:active::-webkit-slider-thumb {
+    transform: scale(1.2);
+    box-shadow: 0 4px 12px rgba(41, 98, 255, 0.6);
+}
+
+/* Ползунок (Firefox) */
+.threshold-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    border: 3px solid var(--text-main);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(41, 98, 255, 0.4);
+}
+.threshold-slider:active::-moz-range-thumb {
+    transform: scale(1.2);
+}
+
+/* Кнопка настроек (шестеренка) */
+#btn-settings {
+    margin-left: 4px;
+}
+#btn-settings.active {
+    color: var(--accent);
+}
+
+/* Адаптация для iOS safe-area */
+@supports (padding: max(0px)) {
+    .modal {
+        padding-bottom: max(18px, env(safe-area-inset-bottom));
+    }
+}
 </style>
 </head>
 <body>
@@ -357,9 +481,12 @@ header {
 		</div>
 		<span id="conn-dot" class="conn-dot connecting" title="Статус соединения"></span>
 	</div>
-	<div>
+		<div class="header-buttons">
 		<button class="btn-icon" id="btn-alerts" type="button" title="Умные уведомления">
 			<svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+		</button>
+		<button class="btn-icon" id="btn-settings" type="button" title="Настройки алертов">
+			<svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
 		</button>
 	</div>
 </header>
@@ -383,6 +510,39 @@ header {
 			<button class="modal-btn confirm" id="modal-confirm" type="button">Добавить</button>
 		</div>
 	</div>
+</div>
+
+<!-- МОДАЛКА НАСТРОЕК АЛЕРТОВ -->
+<div class="modal-overlay" id="settings-overlay">
+    <div class="modal">
+        <div class="modal-title">⚙️ Настройки алертов</div>
+        
+        <div class="settings-group">
+            <label class="settings-label">
+                Порог срабатывания: <span id="threshold-display" class="threshold-value">10.0</span>%
+            </label>
+            <input type="range" id="threshold-slider" min="1" max="20" step="0.5" value="10" class="threshold-slider">
+        </div>
+        
+        <div class="settings-group">
+            <label class="settings-label">
+                Кулдаун между алертами: <span id="cooldown-display" class="threshold-value">15</span> мин
+            </label>
+            <input type="range" id="cooldown-slider" min="5" max="120" step="5" value="15" class="threshold-slider">
+        </div>
+        
+        <div class="modal-hint">
+            💡 <strong>Рекомендации:</strong><br>
+            • 2-5% — высокая чувствительность (много алертов)<br>
+            • 5-10% — баланс сигнала и шума<br>
+            • 10-20% — только сильные движения
+        </div>
+        
+        <div class="modal-actions">
+            <button class="modal-btn cancel" id="settings-cancel" type="button">Отмена</button>
+            <button class="modal-btn confirm" id="settings-save" type="button">Сохранить</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -413,8 +573,8 @@ const KNOWN_QUOTES = ["USDT", "USDC", "FDUSD", "TUSD", "BTC", "ETH", "BNB"];
 
 const defaultCoins = ["BTCUSDT", "ETHUSDT"];
 const MAX_TOTAL_COINS = 15;
-const ALERT_THRESHOLD = 5.0;          // % изменения за 24ч
-const ALERT_COOLDOWN_MS = 15 * 60 * 1000;
+// Эти значения теперь читаются из localStorage в блоке настроек
+// Константы переопределяются там
 const MAX_RECONNECT_DELAY = 30000;
 
 /* ====================== СОСТОЯНИЕ ====================== */
@@ -805,6 +965,95 @@ function showToast(title, message, type) {
 		setTimeout(function () { toast.remove(); }, 250);
 	}, 3500);
 }
+
+/* ====================== НАСТРОЙКИ АЛЕРТОВ ====================== */
+// Глобальные переменные для настроек
+let alertThreshold = parseFloat(localStorage.getItem("amigo_alert_threshold")) || 10.0;
+let alertCooldown = parseInt(localStorage.getItem("amigo_alert_cooldown"), 10) || 15;
+
+// Переопределяем константы с учетом сохраненных настроек
+const ALERT_THRESHOLD = alertThreshold;
+const ALERT_COOLDOWN_MS = alertCooldown * 60 * 1000;
+
+// Функция обновления визуального прогресса ползунка
+function updateSliderProgress(slider) {
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    const value = parseFloat(slider.value);
+    const progress = ((value - min) / (max - min)) * 100;
+    slider.style.setProperty('--slider-progress', progress + '%');
+}
+
+function openSettingsModal() {
+    const overlay = document.getElementById("settings-overlay");
+    if (!overlay) return;
+    
+    // Загружаем текущие значения
+    const thresholdSlider = document.getElementById("threshold-slider");
+    const cooldownSlider = document.getElementById("cooldown-slider");
+    
+    if (thresholdSlider) {
+        thresholdSlider.value = alertThreshold;
+        document.getElementById("threshold-display").textContent = alertThreshold.toFixed(1);
+        updateSliderProgress(thresholdSlider);
+    }
+    
+    if (cooldownSlider) {
+        cooldownSlider.value = alertCooldown;
+        document.getElementById("cooldown-display").textContent = alertCooldown;
+        updateSliderProgress(cooldownSlider);
+    }
+    
+    overlay.classList.add("open");
+    haptic("selection");
+}
+
+function closeSettingsModal() {
+    const overlay = document.getElementById("settings-overlay");
+    if (overlay) overlay.classList.remove("open");
+}
+
+function saveSettings() {
+    const thresholdSlider = document.getElementById("threshold-slider");
+    const cooldownSlider = document.getElementById("cooldown-slider");
+    
+    if (thresholdSlider) {
+        alertThreshold = parseFloat(thresholdSlider.value);
+        localStorage.setItem("amigo_alert_threshold", alertThreshold.toString());
+    }
+    
+    if (cooldownSlider) {
+        alertCooldown = parseInt(cooldownSlider.value, 10);
+        localStorage.setItem("amigo_alert_cooldown", alertCooldown.toString());
+    }
+    
+    closeSettingsModal();
+    showToast("Сохранено", "Порог: " + alertThreshold.toFixed(1) + "%, кулдаун: " + alertCooldown + " мин", "info");
+    haptic("notify", "success");
+    
+    // Перезагружаем страницу чтобы применить новые настройки
+    setTimeout(function() { location.reload(); }, 800);
+}
+
+// Обработчики для настроек
+document.getElementById("btn-settings").addEventListener("click", openSettingsModal);
+document.getElementById("settings-cancel").addEventListener("click", closeSettingsModal);
+document.getElementById("settings-save").addEventListener("click", saveSettings);
+
+document.getElementById("settings-overlay").addEventListener("click", function(e) {
+    if (e.target === this) closeSettingsModal();
+});
+
+// Обновление значений ползунков в реальном времени
+document.getElementById("threshold-slider").addEventListener("input", function(e) {
+    document.getElementById("threshold-display").textContent = parseFloat(e.target.value).toFixed(1);
+    updateSliderProgress(e.target);
+});
+
+document.getElementById("cooldown-slider").addEventListener("input", function(e) {
+    document.getElementById("cooldown-display").textContent = e.target.value;
+    updateSliderProgress(e.target);
+});
 
 /* ====================== СОБЫТИЯ UI ====================== */
 document.getElementById("btn-alerts").addEventListener("click", toggleSmartAlerts);
