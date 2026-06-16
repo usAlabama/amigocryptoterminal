@@ -1332,23 +1332,25 @@ function updateSliderProgress(slider) {
 function openSettingsModal() {
     const overlay = document.getElementById("settings-overlay");
     if (!overlay) return;
-    
-    // Загружаем текущие значения
+
     const thresholdSlider = document.getElementById("threshold-slider");
     const cooldownSlider = document.getElementById("cooldown-slider");
-    
+
     if (thresholdSlider) {
         thresholdSlider.value = alertThreshold;
         document.getElementById("threshold-display").textContent = alertThreshold.toFixed(1);
         updateSliderProgress(thresholdSlider);
     }
-    
+
     if (cooldownSlider) {
         cooldownSlider.value = alertCooldown;
         document.getElementById("cooldown-display").textContent = alertCooldown;
         updateSliderProgress(cooldownSlider);
     }
-    
+
+    // 🔧 ИНИЦИАЛИЗАЦИЯ КРАТКОСРОЧНЫХ АЛЕРТОВ
+    initShortAlertSettings();
+
     overlay.classList.add("open");
     haptic("selection");
 }
@@ -1361,22 +1363,44 @@ function closeSettingsModal() {
 function saveSettings() {
     const thresholdSlider = document.getElementById("threshold-slider");
     const cooldownSlider = document.getElementById("cooldown-slider");
-    
+
     if (thresholdSlider) {
         alertThreshold = parseFloat(thresholdSlider.value);
         localStorage.setItem("amigo_alert_threshold", alertThreshold.toString());
     }
-    
+
     if (cooldownSlider) {
         alertCooldown = parseInt(cooldownSlider.value, 10);
         localStorage.setItem("amigo_alert_cooldown", alertCooldown.toString());
     }
-    
+
+    // 🔧 СОХРАНЕНИЕ КРАТКОСРОЧНЫХ АЛЕРТОВ
+    const toggle = document.getElementById("short-alert-toggle");
+    const shortThresholdSlider = document.getElementById("short-threshold-slider");
+    const windowSlider = document.getElementById("short-window-slider");
+    const shortCooldownSlider = document.getElementById("short-cooldown-slider");
+
+    if (toggle) {
+        shortAlertEnabled = toggle.checked;
+        localStorage.setItem("amigo_short_alert_enabled", shortAlertEnabled ? "true" : "false");
+    }
+    if (shortThresholdSlider) {
+        shortAlertThreshold = parseFloat(shortThresholdSlider.value);
+        localStorage.setItem("amigo_short_alert_threshold", shortAlertThreshold.toString());
+    }
+    if (windowSlider) {
+        shortAlertWindow = parseInt(windowSlider.value, 10);
+        localStorage.setItem("amigo_short_alert_window", shortAlertWindow.toString());
+    }
+    if (shortCooldownSlider) {
+        shortAlertCooldown = parseInt(shortCooldownSlider.value, 10);
+        localStorage.setItem("amigo_short_alert_cooldown", shortCooldownSlider.toString());
+    }
+
     closeSettingsModal();
     showToast("Сохранено", "Порог: " + alertThreshold.toFixed(1) + "%, кулдаун: " + alertCooldown + " мин", "info");
     haptic("notify", "success");
-    
-    // Перезагружаем страницу чтобы применить новые настройки
+
     setTimeout(function() { location.reload(); }, 800);
 }
 
@@ -1400,7 +1424,10 @@ document.getElementById("cooldown-slider").addEventListener("input", function(e)
     updateSliderProgress(e.target);
 });
 
+
 // ========== КРАТКОСРОЧНЫЕ АЛЕРТЫ: ОБРАБОТЧИКИ ==========
+let shortAlertsInitialized = false;
+
 function updateShortAlertsUI() {
     const toggle = document.getElementById("short-alert-toggle");
     const groups = [
@@ -1408,11 +1435,34 @@ function updateShortAlertsUI() {
         document.getElementById("short-alert-settings-2"),
         document.getElementById("short-alert-settings-3")
     ];
-    
+
     if (toggle) toggle.checked = shortAlertEnabled;
     groups.forEach(function(g) {
         if (g) g.classList.toggle("disabled", !shortAlertEnabled);
     });
+
+    // 🔧 Синхронизация значений при включении
+    if (shortAlertEnabled) {
+        const thresholdSlider = document.getElementById("short-threshold-slider");
+        const windowSlider = document.getElementById("short-window-slider");
+        const cooldownSlider = document.getElementById("short-cooldown-slider");
+
+        if (thresholdSlider) {
+            thresholdSlider.value = shortAlertThreshold;
+            document.getElementById("short-threshold-display").textContent = shortAlertThreshold.toFixed(1);
+            updateSliderProgress(thresholdSlider);
+        }
+        if (windowSlider) {
+            windowSlider.value = shortAlertWindow;
+            document.getElementById("short-window-display").textContent = shortAlertWindow;
+            updateSliderProgress(windowSlider);
+        }
+        if (cooldownSlider) {
+            cooldownSlider.value = shortAlertCooldown;
+            document.getElementById("short-cooldown-display").textContent = shortAlertCooldown;
+            updateSliderProgress(cooldownSlider);
+        }
+    }
 }
 
 function initShortAlertSettings() {
@@ -1421,83 +1471,65 @@ function initShortAlertSettings() {
     const windowSlider = document.getElementById("short-window-slider");
     const cooldownSlider = document.getElementById("short-cooldown-slider");
     
-    if (toggle) {
-        toggle.checked = shortAlertEnabled;
-        toggle.addEventListener("change", function(e) {
-            shortAlertEnabled = e.target.checked;
-            updateShortAlertsUI();
-        });
-    }
+    if (toggle) toggle.checked = shortAlertEnabled;
     
     if (thresholdSlider) {
         thresholdSlider.value = shortAlertThreshold;
         document.getElementById("short-threshold-display").textContent = shortAlertThreshold.toFixed(1);
         updateSliderProgress(thresholdSlider);
-        thresholdSlider.addEventListener("input", function(e) {
-            document.getElementById("short-threshold-display").textContent = parseFloat(e.target.value).toFixed(1);
-            updateSliderProgress(e.target);
-        });
     }
     
     if (windowSlider) {
         windowSlider.value = shortAlertWindow;
         document.getElementById("short-window-display").textContent = shortAlertWindow;
         updateSliderProgress(windowSlider);
-        windowSlider.addEventListener("input", function(e) {
-            document.getElementById("short-window-display").textContent = e.target.value;
-            updateSliderProgress(e.target);
-        });
     }
     
     if (cooldownSlider) {
         cooldownSlider.value = shortAlertCooldown;
         document.getElementById("short-cooldown-display").textContent = shortAlertCooldown;
         updateSliderProgress(cooldownSlider);
-        cooldownSlider.addEventListener("input", function(e) {
-            document.getElementById("short-cooldown-display").textContent = e.target.value;
-            updateSliderProgress(e.target);
-        });
     }
     
     updateShortAlertsUI();
+    
+    if (!shortAlertsInitialized) {
+        if (toggle) {
+            toggle.addEventListener("change", function(e) {
+                shortAlertEnabled = e.target.checked;
+                updateShortAlertsUI();
+            });
+        }
+        
+        if (thresholdSlider) {
+            thresholdSlider.addEventListener("input", function(e) {
+                const val = parseFloat(e.target.value);
+                document.getElementById("short-threshold-display").textContent = val.toFixed(1);
+                updateSliderProgress(e.target);
+            });
+        }
+        
+        if (windowSlider) {
+            windowSlider.addEventListener("input", function(e) {
+                const val = parseInt(e.target.value, 10);
+                document.getElementById("short-window-display").textContent = val;
+                updateSliderProgress(e.target);
+            });
+        }
+        
+        if (cooldownSlider) {
+            cooldownSlider.addEventListener("input", function(e) {
+                const val = parseInt(e.target.value, 10);
+                document.getElementById("short-cooldown-display").textContent = val;
+                updateSliderProgress(e.target);
+            });
+        }
+        
+        shortAlertsInitialized = true;
+    }
 }
 
-// Переопределяем saveSettings чтобы сохранял и краткосрочные настройки
-const originalSaveSettings = saveSettings;
-saveSettings = function() {
-    // Сохраняем краткосрочные настройки
-    const toggle = document.getElementById("short-alert-toggle");
-    const thresholdSlider = document.getElementById("short-threshold-slider");
-    const windowSlider = document.getElementById("short-window-slider");
-    const cooldownSlider = document.getElementById("short-cooldown-slider");
-    
-    if (toggle) {
-        shortAlertEnabled = toggle.checked;
-        localStorage.setItem("amigo_short_alert_enabled", shortAlertEnabled ? "true" : "false");
-    }
-    if (thresholdSlider) {
-        shortAlertThreshold = parseFloat(thresholdSlider.value);
-        localStorage.setItem("amigo_short_alert_threshold", shortAlertThreshold.toString());
-    }
-    if (windowSlider) {
-        shortAlertWindow = parseInt(windowSlider.value, 10);
-        localStorage.setItem("amigo_short_alert_window", shortAlertWindow.toString());
-    }
-    if (cooldownSlider) {
-        shortAlertCooldown = parseInt(cooldownSlider.value, 10);
-        localStorage.setItem("amigo_short_alert_cooldown", shortAlertCooldown.toString());
-    }
-    
-    // Вызываем оригинальное сохранение (24ч настройки)
-    originalSaveSettings();
-};
 
-// Переопределяем openSettingsModal чтобы инициализировать новые поля
-const originalOpenSettingsModal = openSettingsModal;
-openSettingsModal = function() {
-    originalOpenSettingsModal();
-    initShortAlertSettings();
-};
 
 /* ====================== СОБЫТИЯ UI ====================== */
 document.getElementById("btn-alerts").addEventListener("click", toggleSmartAlerts);
