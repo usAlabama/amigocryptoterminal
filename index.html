@@ -467,13 +467,42 @@ header {
         padding-bottom: max(18px, env(safe-area-inset-bottom));
     }
 }
+
+.settings-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+}
+
+.settings-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Чекбокс для краткосрочных алертов */
+#short-alert-toggle {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+/* Отключение секции когда чекбокс выключен */
+.settings-group.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
 </style>
 </head>
 <body>
 
 <header>
 	<div class="header-left">
-		<div class="logo">AMIGO<span>.ТЕРМИНАЛ</span></div>
+		<div class="logo">AC<span>.ТЕРМИНАЛ</span></div>
 		<div class="price-ticker" id="global-ticker">
 			<span id="ticker-sym">BTC</span>
 			<span id="ticker-price">...</span>
@@ -531,6 +560,40 @@ header {
             <input type="range" id="cooldown-slider" min="5" max="120" step="5" value="15" class="threshold-slider">
         </div>
         
+		<div class="settings-divider"></div>
+
+		<div class="settings-section-title">⚡ Краткосрочные алерты (5 мин)</div>
+
+		<div class="settings-group">
+			<label class="settings-label">
+				<span>
+					<input type="checkbox" id="short-alert-toggle" style="margin-right: 6px;">
+					Включить краткосрочные алерты
+				</span>
+			</label>
+		</div>
+
+		<div class="settings-group" id="short-alert-settings">
+			<label class="settings-label">
+				Порог (%): <span id="short-threshold-display" class="threshold-value">2.0</span>
+			</label>
+			<input type="range" id="short-threshold-slider" min="0.5" max="10" step="0.5" value="2" class="threshold-slider">
+		</div>
+
+		<div class="settings-group" id="short-alert-settings-2">
+			<label class="settings-label">
+				Окно (мин): <span id="short-window-display" class="threshold-value">5</span>
+			</label>
+			<input type="range" id="short-window-slider" min="1" max="15" step="1" value="5" class="threshold-slider">
+		</div>
+
+		<div class="settings-group" id="short-alert-settings-3">
+			<label class="settings-label">
+				Кулдаун (мин): <span id="short-cooldown-display" class="threshold-value">5</span>
+			</label>
+			<input type="range" id="short-cooldown-slider" min="1" max="60" step="1" value="5" class="threshold-slider">
+		</div>
+		
         <div class="modal-hint">
             💡 <strong>Рекомендации:</strong><br>
             • 2-5% — высокая чувствительность (много алертов)<br>
@@ -846,6 +909,170 @@ function removeCoin(coin) {
 	haptic("notify", "warning");
 }
 
+/* ====================== КРАТКОСРОЧНЫЕ АЛЕРТЫ (5 МИН) ====================== */
+// История цен в памяти: { "BTCUSDT": [{price: 65000, time: 1718000000000}, ...] }
+const priceHistory = {};
+const PRICE_HISTORY_MAX_AGE_MS = 6 * 60 * 1000; // храним 6 минут (с запасом)
+const PRICE_SAVE_INTERVAL_MS = 10000;            // сохраняем точку раз в 10 сек
+const lastPriceSaveTime = {};                    // {symbol: timestamp} последнего сохранения
+
+// Настройки (читаются из localStorage)
+let shortAlertEnabled = localStorage.getItem("amigo_short_alert_enabled") === "true";
+let shortAlertThreshold = parseFloat(localStorage.getItem("amigo_short_alert_threshold")) || 2.0; // % за 5 мин
+let shortAlertWindow = parseInt(localStorage.getItem("amigo_short_alert_window"), 10) || 5;        // минут
+let shortAlertCooldown = parseInt(localStorage.getItem("amigo_short_alert_cooldown"), 10) || 5;    // минут
+
+/**
+ * Сохраняет точку цены в историю (с интервалом, чтобы не спамить память)
+ * Вызывается из onmessage WebSocket
+ */
+function savePricePoint(symbol, price) {
+    const now = Date.now();
+    const n = parseFloat(price);
+    if (!isFinite(n)) return;
+    
+    // Инициализируем историю для символа если нужно
+    if (!priceHistory[symbol]) priceHistory[symbol] = [];
+    
+    // Сохраняем не чаще раза в PRICE_SAVE_INTERVAL_MS
+    if (lastPriceSaveTime[symbol] && (now - lastPriceSaveTime[symbol] < PRICE_SAVE_INTERVAL_MS)) {
+        return;
+    }
+    lastPriceSaveTime[symbol] = now;
+    
+    // Добавляем точку
+    priceHistory[symbol].push({ price: n, time: now });
+    
+    // Обрезаем старые записи (старше PRICE_HISTORY_MAX_AGE_MS)
+    const cutoff = now - PRICE_HISTORY_MAX_AGE_MS;
+    const arr = priceHistory[symbol];
+    let i = 0;
+    while (i < arr.length && arr[i].time < cutoff) i++;
+    if (i > 0) arr.splice(0, i);
+}
+
+/**
+ * Находит цену примерно N минут назад для заданного символа
+ * Возвращает {price, timeAgo} или null если данных недостаточно
+ */
+function findHistoricalPrice(symbol, minutesAgo) {
+    const arr = priceHistory[symbol];
+    if (!arr || arr.length < 2) return null;
+    
+    const targetTime = Date.now() - (minutesAgo * 60 * 1000);
+    
+    // Ищем с конца первую точку, которая СТАРШЕ или равна targetTime
+    // (то есть была записана примерно minutesAgo минут назад или раньше)
+    for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i].time <= targetTime) {
+            const actualMinutesAgo = (Date.now() - arr[i].time) / (60 * 1000);
+            return {
+                price: arr[i].price,
+                actualMinutesAgo: actualMinutesAgo
+            };
+        }
+    }
+    
+    // Если не нашли достаточно старую точку — берём самую первую (для молодых данных)
+    if (arr.length > 0) {
+        const oldest = arr[0];
+        const actualMinutesAgo = (Date.now() - oldest.time) / (60 * 1000);
+        // Возвращаем только если прошло хотя бы 1 минута
+        if (actualMinutesAgo >= 1) {
+            return { price: oldest.price, actualMinutesAgo: actualMinutesAgo };
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Проверяет и стреляет краткосрочным алертом
+ */
+function checkShortTermAlert(symbol, currentPrice) {
+    if (!shortAlertEnabled) return;
+    
+    const n = parseFloat(currentPrice);
+    if (!isFinite(n)) return;
+    
+    const historical = findHistoricalPrice(symbol, shortAlertWindow);
+    if (!historical || historical.price === 0) return;
+    
+    const changePct = ((n - historical.price) / historical.price) * 100;
+    
+    if (Math.abs(changePct) < shortAlertThreshold) return;
+    
+    // Кулдаун (отдельный от 24ч алертов!)
+    const alertKey = "short_alerted_" + symbol;
+    const lastAlertTime = parseInt(sessionStorage.getItem(alertKey), 10);
+    const now = Date.now();
+    const cooldownMs = shortAlertCooldown * 60 * 1000;
+    
+    if (!isNaN(lastAlertTime) && (now - lastAlertTime < cooldownMs)) return;
+    
+    // 🔥 АЛЕРТ СРАБОТАЛ
+    const up = changePct > 0;
+    const dir = up
+        ? "⚡ ПAMП 5MIN: " + symbol.replace("USDT", "")
+        : "💥 ДAMП 5MIN: " + symbol.replace("USDT", "");
+    
+    const toastType = up ? "alert-up" : "alert-down";
+    const prefix = up ? "+" : "";
+    const minutesText = historical.actualMinutesAgo.toFixed(1);
+    
+    showToast(
+        dir,
+        "Цена: " + formatPrice(n) + " (" + prefix + changePct.toFixed(2) + "% за " + minutesText + " мин)",
+        toastType
+    );
+    
+    // Уникальный звук для краткосрочного (более тревожный)
+    playShortTermSound(up ? "pump" : "dump");
+    triggerHaptic(up ? "pump" : "dump");
+    
+    sessionStorage.setItem(alertKey, now.toString());
+}
+
+/**
+ * Специальный "срочный" звук для краткосрочных алертов
+ */
+function playShortTermSound(type) {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    
+    const now = ctx.currentTime;
+    
+    if (type === "pump") {
+        // Быстрый восходящий свип
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+    } else {
+        // Тревожный "падающий" свип
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(1000, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.4);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+    }
+}
+
 /* ====================== УМНЫЕ АЛЕРТЫ ====================== */
 /* ====================== ЗВУКИ И ВИБРАЦИЯ ====================== */
 // Web Audio API для генерации звуков (без внешних файлов)
@@ -1007,6 +1234,15 @@ function connectWebSocket() {
 
 		prices[symbol] = { price: priceStr, changePct: isFinite(changePct) ? changePct : 0 };
 
+		// 💾 Сохраняем цену для краткосрочного анализа
+		savePricePoint(symbol, priceStr);
+
+		if (symbol === currentSymbol) updateTicker(symbol);
+		if (alertsEnabled) checkAndFireAlert(symbol, priceStr, changePct);
+
+		// ⚡ Проверяем краткосрочный алерт
+		checkShortTermAlert(symbol, priceStr);
+
 		if (symbol === currentSymbol) updateTicker(symbol);
 		if (alertsEnabled) checkAndFireAlert(symbol, priceStr, changePct);
 	};
@@ -1163,6 +1399,105 @@ document.getElementById("cooldown-slider").addEventListener("input", function(e)
     document.getElementById("cooldown-display").textContent = e.target.value;
     updateSliderProgress(e.target);
 });
+
+// ========== КРАТКОСРОЧНЫЕ АЛЕРТЫ: ОБРАБОТЧИКИ ==========
+function updateShortAlertsUI() {
+    const toggle = document.getElementById("short-alert-toggle");
+    const groups = [
+        document.getElementById("short-alert-settings"),
+        document.getElementById("short-alert-settings-2"),
+        document.getElementById("short-alert-settings-3")
+    ];
+    
+    if (toggle) toggle.checked = shortAlertEnabled;
+    groups.forEach(function(g) {
+        if (g) g.classList.toggle("disabled", !shortAlertEnabled);
+    });
+}
+
+function initShortAlertSettings() {
+    const toggle = document.getElementById("short-alert-toggle");
+    const thresholdSlider = document.getElementById("short-threshold-slider");
+    const windowSlider = document.getElementById("short-window-slider");
+    const cooldownSlider = document.getElementById("short-cooldown-slider");
+    
+    if (toggle) {
+        toggle.checked = shortAlertEnabled;
+        toggle.addEventListener("change", function(e) {
+            shortAlertEnabled = e.target.checked;
+            updateShortAlertsUI();
+        });
+    }
+    
+    if (thresholdSlider) {
+        thresholdSlider.value = shortAlertThreshold;
+        document.getElementById("short-threshold-display").textContent = shortAlertThreshold.toFixed(1);
+        updateSliderProgress(thresholdSlider);
+        thresholdSlider.addEventListener("input", function(e) {
+            document.getElementById("short-threshold-display").textContent = parseFloat(e.target.value).toFixed(1);
+            updateSliderProgress(e.target);
+        });
+    }
+    
+    if (windowSlider) {
+        windowSlider.value = shortAlertWindow;
+        document.getElementById("short-window-display").textContent = shortAlertWindow;
+        updateSliderProgress(windowSlider);
+        windowSlider.addEventListener("input", function(e) {
+            document.getElementById("short-window-display").textContent = e.target.value;
+            updateSliderProgress(e.target);
+        });
+    }
+    
+    if (cooldownSlider) {
+        cooldownSlider.value = shortAlertCooldown;
+        document.getElementById("short-cooldown-display").textContent = shortAlertCooldown;
+        updateSliderProgress(cooldownSlider);
+        cooldownSlider.addEventListener("input", function(e) {
+            document.getElementById("short-cooldown-display").textContent = e.target.value;
+            updateSliderProgress(e.target);
+        });
+    }
+    
+    updateShortAlertsUI();
+}
+
+// Переопределяем saveSettings чтобы сохранял и краткосрочные настройки
+const originalSaveSettings = saveSettings;
+saveSettings = function() {
+    // Сохраняем краткосрочные настройки
+    const toggle = document.getElementById("short-alert-toggle");
+    const thresholdSlider = document.getElementById("short-threshold-slider");
+    const windowSlider = document.getElementById("short-window-slider");
+    const cooldownSlider = document.getElementById("short-cooldown-slider");
+    
+    if (toggle) {
+        shortAlertEnabled = toggle.checked;
+        localStorage.setItem("amigo_short_alert_enabled", shortAlertEnabled ? "true" : "false");
+    }
+    if (thresholdSlider) {
+        shortAlertThreshold = parseFloat(thresholdSlider.value);
+        localStorage.setItem("amigo_short_alert_threshold", shortAlertThreshold.toString());
+    }
+    if (windowSlider) {
+        shortAlertWindow = parseInt(windowSlider.value, 10);
+        localStorage.setItem("amigo_short_alert_window", shortAlertWindow.toString());
+    }
+    if (cooldownSlider) {
+        shortAlertCooldown = parseInt(cooldownSlider.value, 10);
+        localStorage.setItem("amigo_short_alert_cooldown", shortAlertCooldown.toString());
+    }
+    
+    // Вызываем оригинальное сохранение (24ч настройки)
+    originalSaveSettings();
+};
+
+// Переопределяем openSettingsModal чтобы инициализировать новые поля
+const originalOpenSettingsModal = openSettingsModal;
+openSettingsModal = function() {
+    originalOpenSettingsModal();
+    initShortAlertSettings();
+};
 
 /* ====================== СОБЫТИЯ UI ====================== */
 document.getElementById("btn-alerts").addEventListener("click", toggleSmartAlerts);
