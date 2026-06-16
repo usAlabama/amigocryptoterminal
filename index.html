@@ -847,6 +847,79 @@ function removeCoin(coin) {
 }
 
 /* ====================== УМНЫЕ АЛЕРТЫ ====================== */
+/* ====================== ЗВУКИ И ВИБРАЦИЯ ====================== */
+// Web Audio API для генерации звуков (без внешних файлов)
+let audioCtx = null;
+
+function getAudioContext() {
+    if (!audioCtx) {
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) { return null; }
+    }
+    // На iOS требуется resume после пользовательского жеста
+    if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume().catch(function(){});
+    }
+    return audioCtx;
+}
+
+function playAlertSound(type) {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    
+    const now = ctx.currentTime;
+    
+    if (type === "pump") {
+        // 🚀 Памп: восходящая мелодия (два тона вверх)
+        [523.25, 659.25, 783.99].forEach(function(freq, i) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, now + i * 0.12);
+            gain.gain.linearRampToValueAtTime(0.25, now + i * 0.12 + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.2);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.12);
+            osc.stop(now + i * 0.12 + 0.25);
+        });
+    } else if (type === "dump") {
+        // 🩸 Дамп: тревожный нисходящий звук (низкие частоты)
+        [440, 329.63, 220].forEach(function(freq, i) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sawtooth";
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, now + i * 0.15);
+            gain.gain.linearRampToValueAtTime(0.2, now + i * 0.15 + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.3);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.15);
+            osc.stop(now + i * 0.15 + 0.35);
+        });
+    }
+}
+
+function triggerHaptic(type) {
+    // 1) Нативная вибрация Telegram
+    if (tg && tg.HapticFeedback) {
+        try { tg.HapticFeedback.notificationOccurred(type === "pump" ? "success" : "error"); } catch(e){}
+    }
+    
+    // 2) Vibration API (работает в Android WebView и частично iOS)
+    if ("vibrate" in navigator) {
+        try {
+            if (type === "pump") {
+                navigator.vibrate([150, 80, 150]);          // короткая, позитивная
+            } else if (type === "dump") {
+                navigator.vibrate([300, 100, 300, 100, 500]); // длинная, тревожная
+            }
+        } catch(e) {}
+    }
+}
 function toggleSmartAlerts() {
 	alertsEnabled = !alertsEnabled;
 	localStorage.setItem("amigo_alerts_enabled", alertsEnabled ? "true" : "false");
@@ -863,24 +936,36 @@ function toggleSmartAlerts() {
 }
 
 function checkAndFireAlert(symbol, price, changePct) {
-	if (!isFinite(changePct) || Math.abs(changePct) < ALERT_THRESHOLD) return;
+    if (!isFinite(changePct) || Math.abs(changePct) < ALERT_THRESHOLD) return;
 
-	const alertKey = "alerted_" + symbol;
-	const lastAlertTime = parseInt(sessionStorage.getItem(alertKey), 10);
-	const now = Date.now();
+    const alertKey = "alerted_" + symbol;
+    const lastAlertTime = parseInt(sessionStorage.getItem(alertKey), 10);
+    const now = Date.now();
 
-	if (isNaN(lastAlertTime) || (now - lastAlertTime > ALERT_COOLDOWN_MS)) {
-		const up = changePct > 0;
-		const dir = up ? "\uD83D\uDE80 ПАМП" : "\uD83E\uDE78 ДАМП";
-		const type = up ? "alert-up" : "alert-down";
-		showToast(
-			dir + ": " + symbol.replace("USDT", ""),
-			"Цена: " + price + "  (" + (up ? "+" : "") + changePct.toFixed(2) + "% за 24ч)",
-			type
-		);
-		haptic("notify", "warning");
-		sessionStorage.setItem(alertKey, now.toString());
-	}
+    if (isNaN(lastAlertTime) || (now - lastAlertTime > ALERT_COOLDOWN_MS)) {
+        const up = changePct > 0;
+        const type = up ? "pump" : "dump";
+        
+        // ЯРКИЕ ЗАГОЛОВКИ для визуального различия
+        const dir = up 
+            ? "🚀 ПAMП: " + symbol.replace("USDT", "") 
+            : "🩸 ДAMП: " + symbol.replace("USDT", "");
+        
+        const toastType = up ? "alert-up" : "alert-down";
+        const prefix = up ? "+" : "";
+        
+        showToast(
+            dir,
+            "Цена: " + price + "  (" + prefix + changePct.toFixed(2) + "% за 24ч)",
+            toastType
+        );
+        
+        // 🔊 ЗВУК + ВИБРАЦИЯ (разные для пампа и дампа!)
+        playAlertSound(type);
+        triggerHaptic(type);
+        
+        sessionStorage.setItem(alertKey, now.toString());
+    }
 }
 
 /* ====================== WEBSOCKET (combined stream) ====================== */
@@ -939,31 +1024,55 @@ function connectWebSocket() {
 	};
 }
 
-/* ====================== ТОСТЫ ====================== */
+/* ====================== ТОСТЫ (УЛУЧШЕННАЯ ВЕРСИЯ) ====================== */
 function showToast(title, message, type) {
-	const container = document.getElementById("toast-container");
-	if (!container) return;
+    const container = document.getElementById("toast-container");
+    if (!container) return;
 
-	const toast = document.createElement("div");
-	toast.className = "toast" + (type ? " " + type : "");
+    const toast = document.createElement("div");
+    toast.className = "toast" + (type ? " " + type : "");
 
-	const titleWrap = document.createElement("div");
-	titleWrap.className = "toast-title";
-	const titleSpan = document.createElement("span");
-	titleSpan.textContent = title;
-	titleWrap.appendChild(titleSpan);
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "toast-title";
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = title;
+    
+    // Кнопка закрытия (крестик)
+    const closeBtn = document.createElement("span");
+    closeBtn.textContent = "✕";
+    closeBtn.style.cssText = "cursor: pointer; opacity: 0.6; padding: 0 4px; font-size: 1rem;";
+    closeBtn.onclick = function() { dismissToast(toast); };
+    
+    titleWrap.appendChild(titleSpan);
+    titleWrap.appendChild(closeBtn);
 
-	const msgSpan = document.createElement("span");
-	msgSpan.textContent = message;
+    const msgSpan = document.createElement("span");
+    msgSpan.textContent = message;
 
-	toast.appendChild(titleWrap);
-	toast.appendChild(msgSpan);
-	container.appendChild(toast);
+    toast.appendChild(titleWrap);
+    toast.appendChild(msgSpan);
+    
+    // Клик по самому тосту тоже закрывает
+    toast.onclick = function() { dismissToast(toast); };
+    
+    container.appendChild(toast);
 
-	setTimeout(function () {
-		toast.style.animation = "fadeOut 0.25s ease-out forwards";
-		setTimeout(function () { toast.remove(); }, 250);
-	}, 3500);
+    // ⏱️ УВЕЛИЧЕНО: 8 секунд вместо 3.5
+    const timer = setTimeout(function () {
+        dismissToast(toast);
+    }, 8000);
+    
+    // Сохраняем таймер чтобы можно было отменить при ручном закрытии
+    toast._dismissTimer = timer;
+}
+
+function dismissToast(toast) {
+    if (!toast || !toast.parentNode) return;
+    if (toast._dismissTimer) clearTimeout(toast._dismissTimer);
+    toast.style.animation = "fadeOut 0.25s ease-out forwards";
+    setTimeout(function () { 
+        if (toast.parentNode) toast.remove(); 
+    }, 250);
 }
 
 /* ====================== НАСТРОЙКИ АЛЕРТОВ ====================== */
@@ -1068,14 +1177,27 @@ document.getElementById("modal-overlay").addEventListener("click", function (e) 
 
 /* ====================== СТАРТ ====================== */
 (function init() {
-	const btnAlerts = document.getElementById("btn-alerts");
-	if (btnAlerts) btnAlerts.classList.toggle("active", alertsEnabled);
+    const btnAlerts = document.getElementById("btn-alerts");
+    if (btnAlerts) btnAlerts.classList.toggle("active", alertsEnabled);
 
-	const allCoins = getAllCoins();
-	if (allCoins.indexOf(currentSymbol) === -1) currentSymbol = defaultCoins[0];
+    const allCoins = getAllCoins();
+    if (allCoins.indexOf(currentSymbol) === -1) currentSymbol = defaultCoins[0];
 
-	renderCoinList();   // строит список + поднимает единственный WebSocket
-	changePair(currentSymbol); // строит график и тикер (WS повторно не пересоздаётся)
+    renderCoinList();
+    changePair(currentSymbol);
+    
+    // 🔓 Разблокировка AudioContext для iOS (требуется жест пользователя)
+    // Без этого звук на iPhone не будет работать!
+    function unlockAudio() {
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === "suspended") {
+            ctx.resume().catch(function(){});
+        }
+        document.removeEventListener("touchstart", unlockAudio);
+        document.removeEventListener("click", unlockAudio);
+    }
+    document.addEventListener("touchstart", unlockAudio, { passive: true });
+    document.addEventListener("click", unlockAudio);
 })();
 </script>
 </body>
