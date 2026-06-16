@@ -1,527 +1,833 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Crypto Terminal</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://s3.tradingview.com/tv.js"></script>
-    <style>
-        :root {
-            --bg-dark: #080c10;
-            --bg-panel: #12161f;
-            --bg-btn-hover: #1c2330;
-            --border: #1f2937;
-            --accent: #2962ff;
-            --accent-hover: #1546d2;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --up-color: #00e676;
-            --down-color: #ff5252;
-            --panel-height: 36px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Crypto Terminal</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<style>
+:root {
+	--bg-dark: #080c10;
+	--bg-panel: #12161f;
+	--bg-btn-hover: #1c2330;
+	--border: #1f2937;
+	--accent: #2962ff;
+	--accent-hover: #1546d2;
+	--text-main: #f3f4f6;
+	--text-muted: #9ca3af;
+	--up-color: #00e676;
+	--down-color: #ff5252;
+	--warn-color: #ffd600;
+	--panel-height: 36px;
+}
 
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+* {
+	box-sizing: border-box;
+	user-select: none;
+	-webkit-user-select: none;
+}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            overscroll-behavior: none;
-        }
+input {
+	user-select: text;
+	-webkit-user-select: text;
+	-webkit-touch-callout: default;
+}
 
-        /* УЛЬТРА-ТОНКАЯ ШАПКА + ИНФОБАР */
-        header {
-            background-color: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            padding: 0 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: var(--panel-height);
-            flex-shrink: 0;
-            z-index: 10;
-        }
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	background-color: var(--bg-dark);
+	color: var(--text-main);
+	margin: 0;
+	padding: 0;
+	height: 100dvh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	overscroll-behavior: none;
+}
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+/* УЛЬТРА-ТОНКАЯ ШАПКА + ИНФОБАР */
+header {
+	background-color: var(--bg-panel);
+	border-bottom: 1px solid var(--border);
+	padding: 0 12px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	height: var(--panel-height);
+	flex-shrink: 0;
+	z-index: 10;
+}
 
-        .logo {
-            font-weight: 800;
-            font-size: 0.8rem;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-        }
-        .logo span { color: var(--accent); }
+.header-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
 
-        .price-ticker {
-            font-size: 0.8rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255, 255, 255, 0.03);
-            padding: 3px 8px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+.logo {
+	font-weight: 800;
+	font-size: 0.8rem;
+	letter-spacing: 0.8px;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+.logo span { color: var(--accent); }
 
-        .price-up { color: var(--up-color); }
-        .price-down { color: var(--down-color); }
+.price-ticker {
+	font-size: 0.8rem;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background: rgba(255, 255, 255, 0.03);
+	padding: 3px 8px;
+	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	min-width: 0;
+	overflow: hidden;
+}
 
-        /* Кнопка алертов */
-        .btn-icon {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .btn-icon:all-active, .btn-icon:active { background: var(--bg-btn-hover); }
-        .btn-icon svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.2s; }
-        .btn-icon:active svg { transform: scale(0.9); }
-        .btn-icon.active { color: #ffd600; }
+#ticker-price { white-space: nowrap; }
+.ticker-change { font-size: 0.7rem; opacity: 0.95; white-space: nowrap; }
 
-        /* СЕЛЕКТОР КРИПТЫ (Горизонтальный скролл) */
-        .crypto-selector {
-            display: flex;
-            gap: 8px;
-            padding: 0 12px;
-            background: #0b0f17;
-            border-bottom: 1px solid var(--border);
-            overflow-x: auto;
-            height: 40px;
-            align-items: center;
-            flex-shrink: 0;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-        }
-        .crypto-selector::-webkit-scrollbar { display: none; }
+.price-up { color: var(--up-color); }
+.price-down { color: var(--down-color); }
 
-        .coin-btn {
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 5px 28px 5px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            font-weight: 700;
-            white-space: nowrap;
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            -webkit-tap-highlight-color: transparent;
-        }
+.conn-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--text-muted);
+	flex-shrink: 0;
+	transition: background 0.3s ease;
+}
+.conn-dot.online { background: var(--up-color); box-shadow: 0 0 6px var(--up-color); }
+.conn-dot.connecting { background: var(--warn-color); animation: pulse 1s infinite; }
+.conn-dot.offline { background: var(--down-color); }
 
-        .coin-btn.pinned {
-            padding-right: 12px;
-        }
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.25; }
+}
 
-        .coin-btn.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
-        }
+/* Кнопка алертов */
+.btn-icon {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	transition: all 0.2s ease;
+	-webkit-tap-highlight-color: transparent;
+}
+.btn-icon:active { background: var(--bg-btn-hover); }
+.btn-icon svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.2s; }
+.btn-icon:active svg { transform: scale(0.9); }
+.btn-icon.active { color: var(--warn-color); }
 
-        .coin-btn .btn-del {
-            position: absolute;
-            right: 4px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: var(--text-muted);
-            transition: all 0.15s;
-            z-index: 2;
-        }
-        .coin-btn.active .btn-del { color: rgba(255,255,255,0.7); }
-        .coin-btn .btn-del:active { background: rgba(255, 61, 0, 0.2); color: var(--down-color); }
+/* СЕЛЕКТОР КРИПТЫ (Горизонтальный скролл) */
+.crypto-selector {
+	display: flex;
+	gap: 8px;
+	padding: 0 12px;
+	background: #0b0f17;
+	border-bottom: 1px solid var(--border);
+	overflow-x: auto;
+	height: 40px;
+	align-items: center;
+	flex-shrink: 0;
+	scrollbar-width: none;
+	-webkit-overflow-scrolling: touch;
+}
+.crypto-selector::-webkit-scrollbar { display: none; }
 
-        .btn-add {
-            background: transparent;
-            border: 1px dashed var(--text-muted);
-            padding: 5px 14px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-        .btn-add:active {
-            background: rgba(255,255,255,0.03);
-        }
+.coin-btn {
+	background: var(--bg-panel);
+	border: 1px solid var(--border);
+	color: var(--text-muted);
+	padding: 5px 28px 5px 12px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.75rem;
+	font-weight: 700;
+	white-space: nowrap;
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	-webkit-tap-highlight-color: transparent;
+}
 
-        /* КОНТЕЙНЕР ГРАФИКА */
-        #chart-container {
-            width: 100%;
-            flex-grow: 1;
-            position: relative;
-            background-color: var(--bg-dark);
-        }
+.coin-btn.pinned {
+	padding-right: 12px;
+}
 
-        /* ТОСТЫ УВЕДОМЛЕНИЙ */
-        #toast-container {
-            position: fixed;
-            top: 50px;
-            right: 12px;
-            left: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 10000;
-            pointer-events: none;
-        }
+.coin-btn.active {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: #fff;
+	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
 
-        .toast {
-            background: rgba(18, 22, 31, 0.96);
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--accent);
-            color: #fff;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-            animation: slideIn 0.25s cubic-bezier(0, 0, 0.2, 1) forwards;
-            pointer-events: auto;
-            display: flex;
-            flex-direction: column;
-        }
+.coin-btn .btn-del {
+	position: absolute;
+	right: 4px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 16px;
+	height: 16px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	color: var(--text-muted);
+	transition: all 0.15s;
+	z-index: 2;
+}
+.coin-btn.active .btn-del { color: rgba(255, 255, 255, 0.7); }
+.coin-btn .btn-del:active { background: rgba(255, 61, 0, 0.2); color: var(--down-color); }
 
-        .toast.alert-up { border-left-color: var(--up-color); }
-        .toast.alert-down { border-left-color: var(--down-color); }
-        .toast-title { font-weight: 700; margin-bottom: 3px; display: flex; justify-content: space-between; }
+.btn-add {
+	background: transparent;
+	border: 1px dashed var(--text-muted);
+	padding: 5px 14px;
+	color: var(--text-muted);
+	font-weight: 600;
+}
+.btn-add:active {
+	background: rgba(255, 255, 255, 0.03);
+}
 
-        @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+/* КОНТЕЙНЕР ГРАФИКА */
+#chart-container {
+	width: 100%;
+	flex-grow: 1;
+	position: relative;
+	background-color: var(--bg-dark);
+}
+#chart {
+	position: absolute;
+	inset: 0;
+}
+#chart iframe { display: block; }
 
-        @keyframes fadeOut {
-            from { opacity: 1; transform: scale(1); }
-            to { opacity: 0; transform: scale(0.95); }
-        }
-    </style>
+.chart-loader {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg-dark);
+	z-index: 5;
+	transition: opacity 0.3s ease;
+}
+.chart-loader.hidden { opacity: 0; pointer-events: none; }
+.spinner {
+	width: 28px;
+	height: 28px;
+	border: 3px solid rgba(255, 255, 255, 0.12);
+	border-top-color: var(--accent);
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ТОСТЫ УВЕДОМЛЕНИЙ */
+#toast-container {
+	position: fixed;
+	top: 50px;
+	right: 12px;
+	left: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	z-index: 10000;
+	pointer-events: none;
+}
+
+.toast {
+	background: rgba(18, 22, 31, 0.96);
+	border: 1px solid var(--border);
+	border-left: 4px solid var(--accent);
+	color: #fff;
+	padding: 10px 14px;
+	border-radius: 8px;
+	font-size: 0.8rem;
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+	animation: slideIn 0.25s cubic-bezier(0, 0, 0.2, 1) forwards;
+	pointer-events: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.toast.alert-up { border-left-color: var(--up-color); }
+.toast.alert-down { border-left-color: var(--down-color); }
+.toast-title { font-weight: 700; margin-bottom: 3px; display: flex; justify-content: space-between; }
+
+@keyframes slideIn {
+	from { transform: translateY(-20px); opacity: 0; }
+	to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+	from { opacity: 1; transform: scale(1); }
+	to { opacity: 0; transform: scale(0.95); }
+}
+
+/* МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ */
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 20000;
+	padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+	width: 100%;
+	max-width: 320px;
+	background: var(--bg-panel);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	padding: 18px;
+	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+	animation: slideIn 0.2s ease forwards;
+}
+.modal-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 12px; }
+.modal-input {
+	width: 100%;
+	background: var(--bg-dark);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	color: var(--text-main);
+	padding: 10px 12px;
+	font-size: 0.95rem;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	outline: none;
+	transition: border-color 0.2s;
+}
+.modal-input:focus { border-color: var(--accent); }
+.modal-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 8px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+.modal-btn {
+	flex: 1;
+	padding: 10px;
+	border-radius: 8px;
+	border: none;
+	font-size: 0.85rem;
+	font-weight: 700;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+	transition: all 0.15s;
+}
+.modal-btn.cancel { background: var(--bg-btn-hover); color: var(--text-muted); }
+.modal-btn.cancel:active { background: var(--border); }
+.modal-btn.confirm { background: var(--accent); color: #fff; }
+.modal-btn.confirm:active { background: var(--accent-hover); }
+.modal-btn:disabled { opacity: 0.55; cursor: default; }
+</style>
 </head>
 <body>
 
-    <header>
-        <div class="header-left">
-            <div class="logo">AMIGO<span>.ТЕРМИНАЛ</span></div>
-            <div class="price-ticker" id="global-ticker">
-                <span id="ticker-sym">BTC</span>&nbsp;<span id="ticker-price">...</span>
-            </div>
-        </div>
-        <div>
-            <button class="btn-icon" id="btn-alerts" onclick="toggleSmartAlerts()" title="Умные уведомления">
-                <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
-            </button>
-        </div>
-    </header>
+<header>
+	<div class="header-left">
+		<div class="logo">AMIGO<span>.ТЕРМИНАЛ</span></div>
+		<div class="price-ticker" id="global-ticker">
+			<span id="ticker-sym">BTC</span>
+			<span id="ticker-price">...</span>
+			<span id="ticker-change" class="ticker-change"></span>
+		</div>
+		<span id="conn-dot" class="conn-dot connecting" title="Статус соединения"></span>
+	</div>
+	<div>
+		<button class="btn-icon" id="btn-alerts" type="button" title="Умные уведомления">
+			<svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+		</button>
+	</div>
+</header>
 
-    <div class="crypto-selector" id="coin-list"></div>
+<div class="crypto-selector" id="coin-list"></div>
 
-    <div id="chart-container"></div>
-    <div id="toast-container"></div>
+<div id="chart-container">
+	<div id="chart"></div>
+	<div class="chart-loader" id="chart-loader"><div class="spinner"></div></div>
+</div>
 
-    <script>
-        const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.ready();
-            tg.expand();
-        }
+<div id="toast-container"></div>
 
-        const defaultCoins = ['BTCUSDT', 'ETHUSDT'];
-        let userCoins = JSON.parse(localStorage.getItem('amigo_user_coins')) || ['SOLUSDT', 'TONUSDT', 'DOGEUSDT'];
-        const MAX_TOTAL_COINS = 15; 
-        
-        let currentSymbol = 'BTCUSDT';
-        let tvWidget = null;
-        let ws = null;
-        let prices = {}; 
-        let alertsEnabled = localStorage.getItem('amigo_alerts_enabled') === 'true';
+<div class="modal-overlay" id="modal-overlay">
+	<div class="modal">
+		<div class="modal-title">Добавить монету</div>
+		<input class="modal-input" id="modal-input" type="text" placeholder="XRP, ADA, PEPE…" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+		<div class="modal-hint">Базовая котировка по умолчанию — USDT. Можно указать пару целиком (напр. SOLUSDC).</div>
+		<div class="modal-actions">
+			<button class="modal-btn cancel" id="modal-cancel" type="button">Отмена</button>
+			<button class="modal-btn confirm" id="modal-confirm" type="button">Добавить</button>
+		</div>
+	</div>
+</div>
 
-        // Инициализация кнопки алертов из кеша
-        document.getElementById('btn-alerts').classList.toggle('active', alertsEnabled);
+<script>
+"use strict";
 
-        function renderCoinList() {
-            const container = document.getElementById('coin-list');
-            if (!container) return;
-            container.innerHTML = '';
+/* ====================== TELEGRAM ====================== */
+const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+if (tg) {
+	try { tg.ready(); } catch (e) {}
+	try { tg.expand(); } catch (e) {}
+	try { tg.setHeaderColor("#12161f"); } catch (e) {}
+	try { tg.setBackgroundColor("#080c10"); } catch (e) {}
+	try { if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes(); } catch (e) {}
+}
+function haptic(kind, arg) {
+	if (!tg || !tg.HapticFeedback) return;
+	try {
+		if (kind === "selection") tg.HapticFeedback.selectionChanged();
+		else tg.HapticFeedback.notificationOccurred(arg);
+	} catch (e) {}
+}
 
-            const allCoins = [...new Set([...defaultCoins, ...userCoins])].slice(0, MAX_TOTAL_COINS);
+/* ====================== КОНСТАНТЫ / ХОСТЫ ====================== */
+// Публичные market-data хосты Binance (без ключей, с CORS, устойчивее к гео-ограничениям).
+const REST_HOST = "https://data-api.binance.vision";
+const WS_HOST = "wss://data-stream.binance.vision";
+const KNOWN_QUOTES = ["USDT", "USDC", "FDUSD", "TUSD", "BTC", "ETH", "BNB"];
 
-            allCoins.forEach(coin => {
-                const isPinned = defaultCoins.includes(coin);
-                const btn = document.createElement('button');
-                btn.className = `coin-btn ${coin === currentSymbol ? 'active' : ''} ${isPinned ? 'pinned' : ''}`;
-                
-                const cleanName = coin.replace('USDT', '');
-                btn.insertAdjacentText('beforeend', cleanName);
+const defaultCoins = ["BTCUSDT", "ETHUSDT"];
+const MAX_TOTAL_COINS = 15;
+const ALERT_THRESHOLD = 5.0;          // % изменения за 24ч
+const ALERT_COOLDOWN_MS = 15 * 60 * 1000;
+const MAX_RECONNECT_DELAY = 30000;
 
-                if (!isPinned) {
-                    const delBadge = document.createElement('span');
-                    delBadge.className = 'btn-del';
-                    delBadge.innerHTML = '×';
-                    delBadge.onclick = (e) => {
-                        e.stopPropagation();
-                        removeCoin(coin);
-                    };
-                    btn.appendChild(delBadge);
-                }
+/* ====================== СОСТОЯНИЕ ====================== */
+function loadUserCoins() {
+	try {
+		const stored = JSON.parse(localStorage.getItem("amigo_user_coins"));
+		if (Array.isArray(stored)) {
+			return stored.filter(function (c) { return typeof c === "string" && c.length > 0; });
+		}
+	} catch (e) {}
+	return ["SOLUSDT", "TONUSDT", "DOGEUSDT"];
+}
 
-                btn.onclick = () => {
-                    if (coin !== currentSymbol) {
-                        changePair(coin, btn);
-                    }
-                };
-                
-                container.appendChild(btn);
-            });
+let userCoins = loadUserCoins();
+let currentSymbol = localStorage.getItem("amigo_current_symbol") || "BTCUSDT";
+let alertsEnabled = localStorage.getItem("amigo_alerts_enabled") === "true";
 
-            const addBtn = document.createElement('button');
-            addBtn.className = 'coin-btn btn-add';
-            addBtn.innerText = '+';
-            addBtn.onclick = addNewCoin;
-            container.appendChild(addBtn);
+let tvWidget = null;
+let ws = null;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+let currentStreams = [];
+const prices = {}; // symbol -> { price: string, changePct: number }
 
-            initWebSocket(allCoins);
-        }
+/* ====================== ВСПОМОГАТЕЛЬНЫЕ ====================== */
+function getAllCoins() {
+	return Array.from(new Set(defaultCoins.concat(userCoins))).slice(0, MAX_TOTAL_COINS);
+}
 
-        function initTradingViewWidget(symbol) {
-            const container = document.getElementById('chart-container');
-            if (!container) return;
-            
-            container.innerHTML = ''; 
+function formatPrice(value) {
+	const n = parseFloat(value);
+	if (!isFinite(n)) return "...";
+	let digits;
+	if (n >= 1000) digits = 2;
+	else if (n >= 1) digits = 3;
+	else if (n >= 0.1) digits = 4;
+	else if (n >= 0.001) digits = 6;
+	else digits = 8;
+	return n.toLocaleString("en-US", {
+		minimumFractionDigits: n >= 1 ? 2 : digits,
+		maximumFractionDigits: digits
+	});
+}
 
-            // Скрываем объемы снизу графиков по требованию, заменяем на RSI + VWAP непосредственно на графике
-            tvWidget = new TradingView.widget({
-                "autosize": true,
-                "symbol": `BINANCE:${symbol}`,
-                "interval": "15",
-                "timezone": "Etc/UTC",
-                "theme": "dark",
-                "style": "1",
-                "locale": "ru",
-                "backgroundColor": "#080c10",
-                "gridColor": "#12161f",
-                "toolbar_bg": "#080c10",
-                "enable_publishing": false,
-                "hide_side_toolbar": true,
-                "allow_symbol_change": false,
-                "save_image": false,
-                "container_id": "chart-container",
-                "studies": [
-                    "MACD@tv-basicstudies",
-                    "RSI@tv-basicstudies",
-                    "VWAP@tv-basicstudies"
-                ],
-                "disabled_features": [
-                    "volume_force_overlay"
-                ]
-            });
-        }
+function setConnStatus(state) {
+	const dot = document.getElementById("conn-dot");
+	if (dot) dot.className = "conn-dot " + state;
+}
 
-        function changePair(symbol, btnElement) {
-            currentSymbol = symbol;
-            
-            document.querySelectorAll('.coin-btn').forEach(b => b.classList.remove('active'));
-            if (btnElement) {
-                btnElement.classList.add('active');
-            } else {
-                renderCoinList();
-            }
+/* ====================== РЕНДЕР СПИСКА МОНЕТ ====================== */
+function renderCoinList() {
+	const container = document.getElementById("coin-list");
+	if (!container) return;
+	container.innerHTML = "";
 
-            const displaySym = symbol.replace('USDT', '');
-            document.getElementById('ticker-sym').innerText = displaySym;
-            
-            const cachedPrice = prices[symbol];
-            const priceEl = document.getElementById('ticker-price');
-            priceEl.innerText = cachedPrice ? cachedPrice : '...';
-            priceEl.className = ''; 
+	const allCoins = getAllCoins();
 
-            initTradingViewWidget(symbol);
-            
-            if (tg?.HapticFeedback) {
-                tg.HapticFeedback.selectionChanged();
-            }
-        }
+	allCoins.forEach(function (coin) {
+		const isPinned = defaultCoins.indexOf(coin) !== -1;
+		const btn = document.createElement("button");
+		btn.type = "button";
+		btn.className = "coin-btn" + (coin === currentSymbol ? " active" : "") + (isPinned ? " pinned" : "");
+		btn.dataset.symbol = coin;
+		btn.insertAdjacentText("beforeend", coin.replace("USDT", ""));
 
-        function addNewCoin() {
-            let newCoin = prompt("Введите тикер монеты к USDT (например: XRP, ADA, PEPE):");
-            if (!newCoin) return;
-            
-            newCoin = newCoin.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
-            if (!newCoin) return;
-            
-            if (!newCoin.endsWith('USDT') && !newCoin.endsWith('BUSD')) {
-                newCoin += 'USDT';
-            }
+		if (!isPinned) {
+			const delBadge = document.createElement("span");
+			delBadge.className = "btn-del";
+			delBadge.textContent = "\u00D7";
+			delBadge.onclick = function (e) {
+				e.stopPropagation();
+				removeCoin(coin);
+			};
+			btn.appendChild(delBadge);
+		}
 
-            const allCoins = [...new Set([...defaultCoins, ...userCoins])];
-            if (allCoins.length >= MAX_TOTAL_COINS) {
-                showToast("Лимит", `Максимум ${MAX_TOTAL_COINS} монет для стабильности сокета.`, 'alert-down');
-                return;
-            }
+		btn.onclick = function () {
+			if (coin !== currentSymbol) changePair(coin);
+		};
 
-            if (!allCoins.includes(newCoin)) {
-                userCoins.push(newCoin);
-                localStorage.setItem('amigo_user_coins', JSON.stringify(userCoins));
-                renderCoinList();
-                showToast("Успешно", `${newCoin.replace('USDT','')} добавлен в список мониторинга`, 'info');
-                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                showToast("Инфо", "Монета уже добавлена в список", "info");
-            }
-        }
+		container.appendChild(btn);
+	});
 
-        function removeCoin(coin) {
-            userCoins = userCoins.filter(c => c !== coin);
-            localStorage.setItem('amigo_user_coins', JSON.stringify(userCoins));
-            
-            const alertKey = `alerted_${coin}`;
-            sessionStorage.removeItem(alertKey);
+	const addBtn = document.createElement("button");
+	addBtn.type = "button";
+	addBtn.className = "coin-btn btn-add";
+	addBtn.textContent = "+";
+	addBtn.onclick = openAddModal;
+	container.appendChild(addBtn);
 
-            if (currentSymbol === coin) {
-                changePair(defaultCoins[0]);
-            } else {
-                renderCoinList();
-            }
-            showToast("Удалено", `${coin.replace('USDT','')} успешно извлечен из панели`, 'info');
-            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
-        }
+	initWebSocket(allCoins);
+}
 
-        function toggleSmartAlerts() {
-            alertsEnabled = !alertsEnabled;
-            localStorage.setItem('amigo_alerts_enabled', alertsEnabled ? 'true' : 'false');
-            
-            const btn = document.getElementById('btn-alerts');
-            btn.classList.toggle('active', alertsEnabled);
-            
-            if (alertsEnabled) {
-                showToast("Smart Alerts", "Мониторинг аномальной волатильности (≥10%) запущен", "info");
-                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                showToast("Smart Alerts", "Мониторинг полностью деактивирован", "info");
-            }
-        }
+/* ====================== ГРАФИК TRADINGVIEW ====================== */
+function showChartLoader() {
+	const l = document.getElementById("chart-loader");
+	if (l) l.classList.remove("hidden");
+}
+function hideChartLoader() {
+	const l = document.getElementById("chart-loader");
+	if (l) l.classList.add("hidden");
+}
 
-        function initWebSocket(coins) {
-            if (ws) {
-                ws.onclose = null;
-                ws.close();
-            }
-            
-            const streams = coins.map(c => `${c.toLowerCase()}@ticker`).join('/');
-            ws = new WebSocket(`wss://stream.binance.com:9443/ws/${streams}`);
+function initTradingViewWidget(symbol) {
+	const host = document.getElementById("chart");
+	if (!host || typeof TradingView === "undefined") return;
 
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (!data || !data.s) return;
+	host.innerHTML = "";
+	showChartLoader();
 
-                    const symbol = data.s;
-                    const rawPrice = parseFloat(data.c);
-                    const price = rawPrice.toFixed(rawPrice < 1 ? 4 : (rawPrice < 20 ? 3 : 2));
-                    const priceChangePercent = parseFloat(data.P); 
+	// Бесплатный embed-виджет tv.js: RSI + MACD + VWAP прямо на графике, без нижних объёмов.
+	tvWidget = new TradingView.widget({
+		"autosize": true,
+		"symbol": "BINANCE:" + symbol,
+		"interval": "15",
+		"timezone": "Etc/UTC",
+		"theme": "dark",
+		"style": "1",
+		"locale": "ru",
+		"backgroundColor": "#080c10",
+		"gridColor": "rgba(31, 41, 55, 0.6)",
+		"enable_publishing": false,
+		"hide_side_toolbar": true,
+		"allow_symbol_change": false,
+		"save_image": false,
+		"studies": [
+			"MACD@tv-basicstudies",
+			"RSI@tv-basicstudies",
+			"VWAP@tv-basicstudies"
+		],
+		"container_id": "chart"
+	});
 
-                    prices[symbol] = price;
+	requestAnimationFrame(function () {
+		const iframe = host.querySelector("iframe");
+		if (iframe) iframe.addEventListener("load", hideChartLoader, { once: true });
+		setTimeout(hideChartLoader, 2500); // страховочный таймаут
+	});
+}
 
-                    if (symbol === currentSymbol) {
-                        const priceEl = document.getElementById('ticker-price');
-                        if (priceEl) {
-                            priceEl.innerText = price;
-                            priceEl.className = priceChangePercent >= 0 ? 'price-up' : 'price-down';
-                        }
-                    }
+/* ====================== ТИКЕР / СМЕНА ПАРЫ ====================== */
+function updateTicker(symbol) {
+	const priceEl = document.getElementById("ticker-price");
+	const chgEl = document.getElementById("ticker-change");
+	const info = prices[symbol];
 
-                    if (alertsEnabled) {
-                        checkAndFireAlert(symbol, price, priceChangePercent);
-                    }
-                } catch (e) {
-                    console.error("WS parsing error:", e);
-                }
-            };
+	if (!info) {
+		if (priceEl) { priceEl.textContent = "..."; priceEl.className = ""; }
+		if (chgEl) { chgEl.textContent = ""; chgEl.className = "ticker-change"; }
+		return;
+	}
 
-            ws.onclose = () => {
-                // Плавное автоподключение при разрывах без падения интерфейса
-                setTimeout(() => {
-                    const activeCoins = [...new Set([...defaultCoins, ...userCoins])].slice(0, MAX_TOTAL_COINS);
-                    initWebSocket(activeCoins);
-                }, 5000);
-            };
+	const up = info.changePct >= 0;
+	if (priceEl) {
+		priceEl.textContent = info.price;
+		priceEl.className = up ? "price-up" : "price-down";
+	}
+	if (chgEl) {
+		chgEl.textContent = (up ? "+" : "") + info.changePct.toFixed(2) + "%";
+		chgEl.className = "ticker-change " + (up ? "price-up" : "price-down");
+	}
+}
 
-            ws.onerror = (err) => {
-                console.error("WS socket error", err);
-            };
-        }
+function changePair(symbol) {
+	if (!symbol) return;
+	currentSymbol = symbol;
+	localStorage.setItem("amigo_current_symbol", symbol);
 
-        function checkAndFireAlert(symbol, price, changePct) {
-            if (Math.abs(changePct) < 10.0) return;
+	document.querySelectorAll(".coin-btn").forEach(function (b) {
+		b.classList.toggle("active", b.dataset.symbol === symbol);
+	});
 
-            const alertKey = `alerted_${symbol}`;
-            const lastAlertTime = sessionStorage.getItem(alertKey);
-            const now = Date.now();
+	const symEl = document.getElementById("ticker-sym");
+	if (symEl) symEl.textContent = symbol.replace("USDT", "");
 
-            // Интервал повторного срабатывания алерта для одной монеты — не чаще 15 минут, во избежание спама спама
-            if (!lastAlertTime || (now - parseInt(lastAlertTime) > 15 * 60 * 1000)) {
-                const dir = changePct > 0 ? "🚀 ПАМП" : "🩸 ДАМП";
-                const type = changePct > 0 ? "alert-up" : "alert-down";
-                
-                showToast(`${dir}: ${symbol.replace('USDT','')}`, `Текущая цена: ${price} (${changePct > 0 ? '+' : ''}${changePct}%)`, type);
-                
-                if (tg?.HapticFeedback) {
-                    tg.HapticFeedback.notificationOccurred('warning');
-                }
-                
-                sessionStorage.setItem(alertKey, now.toString());
-            }
-        }
+	updateTicker(symbol);
+	initTradingViewWidget(symbol);
+	haptic("selection");
+}
 
-        function showToast(title, message, type = '') {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
+/* ====================== ДОБАВЛЕНИЕ / УДАЛЕНИЕ ====================== */
+function normalizeSymbol(raw) {
+	let s = (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+	if (!s) return "";
+	const hasQuote = KNOWN_QUOTES.some(function (q) { return s.endsWith(q) && s.length > q.length; });
+	if (!hasQuote) s += "USDT";
+	return s;
+}
 
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `<div class="toast-title"><span>${title}</span></div><span>${message}</span>`;
-            
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'fadeOut 0.25s ease-out forwards';
-                setTimeout(() => toast.remove(), 250);
-            }, 3500);
-        }
+function validateSymbol(symbol) {
+	return fetch(REST_HOST + "/api/v3/ticker/price?symbol=" + encodeURIComponent(symbol))
+		.then(function (res) { return res.ok ? res.json() : null; })
+		.then(function (data) { return !!(data && data.price); })
+		.catch(function () { return false; });
+}
 
-        // Запуск системы
-        renderCoinList();
-        changePair(currentSymbol);
-    </script>
+function openAddModal() {
+	const overlay = document.getElementById("modal-overlay");
+	const input = document.getElementById("modal-input");
+	if (!overlay || !input) return;
+	input.value = "";
+	setModalLoading(false);
+	overlay.classList.add("open");
+	setTimeout(function () { try { input.focus(); } catch (e) {} }, 50);
+}
+
+function closeAddModal() {
+	const overlay = document.getElementById("modal-overlay");
+	if (overlay) overlay.classList.remove("open");
+}
+
+function setModalLoading(loading) {
+	const confirmBtn = document.getElementById("modal-confirm");
+	if (!confirmBtn) return;
+	confirmBtn.disabled = loading;
+	confirmBtn.textContent = loading ? "Проверка…" : "Добавить";
+}
+
+function confirmAddCoin() {
+	const input = document.getElementById("modal-input");
+	if (!input) return;
+
+	const symbol = normalizeSymbol(input.value);
+	if (!symbol) return;
+
+	const allCoins = getAllCoins();
+
+	if (allCoins.length >= MAX_TOTAL_COINS) {
+		showToast("Лимит", "Максимум " + MAX_TOTAL_COINS + " монет для стабильности сокета.", "alert-down");
+		closeAddModal();
+		return;
+	}
+	if (allCoins.indexOf(symbol) !== -1) {
+		showToast("Инфо", "Монета уже добавлена в список", "info");
+		closeAddModal();
+		return;
+	}
+
+	setModalLoading(true);
+	validateSymbol(symbol).then(function (valid) {
+		setModalLoading(false);
+		if (!valid) {
+			showToast("Ошибка", "Пара " + symbol + " не найдена на Binance", "alert-down");
+			haptic("notify", "error");
+			return;
+		}
+		userCoins.push(symbol);
+		localStorage.setItem("amigo_user_coins", JSON.stringify(userCoins));
+		closeAddModal();
+		renderCoinList();
+		changePair(symbol);
+		showToast("Успешно", symbol.replace("USDT", "") + " добавлен в мониторинг", "info");
+		haptic("notify", "success");
+	});
+}
+
+function removeCoin(coin) {
+	userCoins = userCoins.filter(function (c) { return c !== coin; });
+	localStorage.setItem("amigo_user_coins", JSON.stringify(userCoins));
+	sessionStorage.removeItem("alerted_" + coin);
+
+	const switching = currentSymbol === coin;
+	if (switching) currentSymbol = defaultCoins[0];
+
+	renderCoinList();
+	if (switching) changePair(defaultCoins[0]);
+
+	showToast("Удалено", coin.replace("USDT", "") + " убран из панели", "info");
+	haptic("notify", "warning");
+}
+
+/* ====================== УМНЫЕ АЛЕРТЫ ====================== */
+function toggleSmartAlerts() {
+	alertsEnabled = !alertsEnabled;
+	localStorage.setItem("amigo_alerts_enabled", alertsEnabled ? "true" : "false");
+
+	const btn = document.getElementById("btn-alerts");
+	if (btn) btn.classList.toggle("active", alertsEnabled);
+
+	if (alertsEnabled) {
+		showToast("Smart Alerts", "Мониторинг аномального движения (\u2265" + ALERT_THRESHOLD + "%) запущен", "info");
+		haptic("notify", "success");
+	} else {
+		showToast("Smart Alerts", "Мониторинг деактивирован", "info");
+	}
+}
+
+function checkAndFireAlert(symbol, price, changePct) {
+	if (!isFinite(changePct) || Math.abs(changePct) < ALERT_THRESHOLD) return;
+
+	const alertKey = "alerted_" + symbol;
+	const lastAlertTime = parseInt(sessionStorage.getItem(alertKey), 10);
+	const now = Date.now();
+
+	if (isNaN(lastAlertTime) || (now - lastAlertTime > ALERT_COOLDOWN_MS)) {
+		const up = changePct > 0;
+		const dir = up ? "\uD83D\uDE80 ПАМП" : "\uD83E\uDE78 ДАМП";
+		const type = up ? "alert-up" : "alert-down";
+		showToast(
+			dir + ": " + symbol.replace("USDT", ""),
+			"Цена: " + price + "  (" + (up ? "+" : "") + changePct.toFixed(2) + "% за 24ч)",
+			type
+		);
+		haptic("notify", "warning");
+		sessionStorage.setItem(alertKey, now.toString());
+	}
+}
+
+/* ====================== WEBSOCKET (combined stream) ====================== */
+function initWebSocket(coins) {
+	if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+
+	if (ws) {
+		ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+		try { ws.close(); } catch (e) {}
+		ws = null;
+	}
+
+	currentStreams = coins.map(function (c) { return c.toLowerCase() + "@ticker"; });
+	reconnectAttempts = 0;
+	connectWebSocket();
+}
+
+function connectWebSocket() {
+	if (currentStreams.length === 0) return;
+	setConnStatus("connecting");
+
+	const url = WS_HOST + "/stream?streams=" + currentStreams.join("/");
+	ws = new WebSocket(url);
+
+	ws.onopen = function () {
+		reconnectAttempts = 0;
+		setConnStatus("online");
+	};
+
+	ws.onmessage = function (event) {
+		let msg;
+		try { msg = JSON.parse(event.data); } catch (e) { return; }
+		const data = msg && msg.data ? msg.data : msg; // combined-обёртка {stream,data}
+		if (!data || !data.s) return;
+
+		const symbol = data.s;
+		const changePct = parseFloat(data.P);
+		const priceStr = formatPrice(data.c);
+
+		prices[symbol] = { price: priceStr, changePct: isFinite(changePct) ? changePct : 0 };
+
+		if (symbol === currentSymbol) updateTicker(symbol);
+		if (alertsEnabled) checkAndFireAlert(symbol, priceStr, changePct);
+	};
+
+	ws.onclose = function () {
+		setConnStatus("offline");
+		const delay = Math.min(MAX_RECONNECT_DELAY, 1000 * Math.pow(2, reconnectAttempts));
+		reconnectAttempts++;
+		reconnectTimer = setTimeout(connectWebSocket, delay);
+	};
+
+	ws.onerror = function () {
+		// onerror всегда сопровождается onclose — переподключение там
+		try { ws.close(); } catch (e) {}
+	};
+}
+
+/* ====================== ТОСТЫ ====================== */
+function showToast(title, message, type) {
+	const container = document.getElementById("toast-container");
+	if (!container) return;
+
+	const toast = document.createElement("div");
+	toast.className = "toast" + (type ? " " + type : "");
+
+	const titleWrap = document.createElement("div");
+	titleWrap.className = "toast-title";
+	const titleSpan = document.createElement("span");
+	titleSpan.textContent = title;
+	titleWrap.appendChild(titleSpan);
+
+	const msgSpan = document.createElement("span");
+	msgSpan.textContent = message;
+
+	toast.appendChild(titleWrap);
+	toast.appendChild(msgSpan);
+	container.appendChild(toast);
+
+	setTimeout(function () {
+		toast.style.animation = "fadeOut 0.25s ease-out forwards";
+		setTimeout(function () { toast.remove(); }, 250);
+	}, 3500);
+}
+
+/* ====================== СОБЫТИЯ UI ====================== */
+document.getElementById("btn-alerts").addEventListener("click", toggleSmartAlerts);
+document.getElementById("modal-cancel").addEventListener("click", closeAddModal);
+document.getElementById("modal-confirm").addEventListener("click", confirmAddCoin);
+document.getElementById("modal-input").addEventListener("keydown", function (e) {
+	if (e.key === "Enter") { e.preventDefault(); confirmAddCoin(); }
+});
+document.getElementById("modal-overlay").addEventListener("click", function (e) {
+	if (e.target === this) closeAddModal();
+});
+
+/* ====================== СТАРТ ====================== */
+(function init() {
+	const btnAlerts = document.getElementById("btn-alerts");
+	if (btnAlerts) btnAlerts.classList.toggle("active", alertsEnabled);
+
+	const allCoins = getAllCoins();
+	if (allCoins.indexOf(currentSymbol) === -1) currentSymbol = defaultCoins[0];
+
+	renderCoinList();   // строит список + поднимает единственный WebSocket
+	changePair(currentSymbol); // строит график и тикер (WS повторно не пересоздаётся)
+})();
+</script>
 </body>
 </html>
